@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 import seaborn as sns             #library for analysis
 
 from scipy.stats import t         #library for regression
@@ -10,16 +11,16 @@ from scipy.stats import f
 from scipy.stats import linregress
 from tabulate import tabulate
 from matplotlib.backends.backend_pdf import PdfPages
-from IPython.display import display, Latex
+from IPython.display import display, Latex, Markdown
 import sys                        #library for surface graph
 
 
 from sympy import symbols         #sympy library for symbols, diff, solve and subs
 
-class analysis: 
+class Analysis: 
     
     """
-    Class -> analysis(X,y,effect_error,t) - Class for calculating factorial planning effects.
+    Class -> Analysis(X,y,effect_error,t) - Class for calculating factorial planning effects.
     Instantiate this class to access the following methods: probability_graph(), effect_percentages(), analysis_effect().
 
     Attributes
@@ -120,17 +121,21 @@ class analysis:
         self.__label(axs)
         self.__check_ic(axs)
         axs[0].grid(color='k', linestyle='solid')
-        
+
         sns.set_style("whitegrid")
         sns.load_dataset("tips")
         
         axs[1] = sns.barplot(x='Effects', y='%', color='purple', data=pd.DataFrame(
             {'Effects': self.__effect_indices, '%': self.__calculate_percentage_effects()}))
         axs[1].set_title('Effect Percentages', fontsize=16, fontweight='black', loc='left')
+
+        # Rotate x-axis labels for the bar plot
+        for tick in axs[1].get_xticklabels():
+            tick.set_rotation(45)
         
-        fig.suptitle('Effect Graphs Analysis', fontsize=22, y=0.99, fontweight='black', color='darkred')
+        fig.suptitle('Effect Analysis Chart', fontsize=22, y=0.99, fontweight='black', color='darkred')
         plt.tight_layout()
-        plt.savefig('fabi_effect_graphs.png', transparent=True)
+        plt.savefig('effect_analysis_Chart.png', transparent=True)
         
     def __plot_ic(self, axs):  
         axs[0].plot(-self.__define_ic(), self.__define_gaussian(), color='red')
@@ -159,9 +164,9 @@ class analysis:
         return plt.show(self.__graphics_analysis())
 
     
-class CP:
+class Cp:
     """
-    Class -> CP(y, k) - Class for calculating value-t and effect_error 
+    Class -> Cp(y, k) - Class for calculating value-t and effect_error 
         
     Atributes
     -----------
@@ -175,9 +180,9 @@ class CP:
     
     effect_error: return the error of one efffect
     
-    pqes: return Pure Quadratic Error Sum
+    sspe: return Pure Quadratic Error Sum
     
-    df_pqes: return the degrees of freedom
+    df_sspe: return the degrees of freedom
    
     """
     def __init__(self,y=None , k=None):
@@ -205,7 +210,7 @@ class CP:
         Parameters
         -----------
         
-        (optional) df_a: degree of freedom that not belong to CP class
+        (optional) df_a: degree of freedom that not belong to Cp class
         
         Returns:
         
@@ -216,7 +221,8 @@ class CP:
             return t.ppf(1-.05/2,self.__df())
         else:
             return t.ppf(1-.05/2,df_a)
-        
+
+                    
     def __message_error_11(self):
         return print('Erro11: Invalid parameters.')
     
@@ -230,24 +236,27 @@ class CP:
         else:
             return self.__calculate_effect_error()
     
-    def __calculate_pqes(self):
+    def __calculate_sspe(self):
      
         return np.sum((self.__array() - np.mean(self.__array()))**2)
     
-    def pqes(self):     
-        """Return pqes value"""
+    def sspe(self):     
+        """Return sspe value"""
         if self.y.all() == None:
             return self.__message_error_11()
         else:
-            return self.__calculate_pqes()
-    
-    def  df_pqes(self):
+            sspe_value = self.__calculate_sspe()
+            display(Markdown(f'**SSPE is equal to** {sspe_value}'))
+            return sspe_value
+             
+            
+    def  df_sspe(self):
         """Return degree of freedom"""
         return len(self.y)
 
-class regression_analysis:
+class RegressionAnalysis:
     """
-        Class -> regression(X, y, pqes, dof) - Create a regression model and adjust it through Variance Analysis
+        Class -> RegressionAnalysis(X, y, sspe, dof) - Create a regression model and adjust it through Variance Analysis
         
         This routine aims to calculate regression models using the following equation:
         
@@ -259,13 +268,13 @@ class regression_analysis:
         
         y: Response that will be modeled (type: pandas.Series)
         
-        pqes (optional): Pure Error Sum of Squares of the values at the Central point (type: float or int)
-        Use pde.CP(yc).pqes() to calculate
-        For more info: help(pde.CP.pqes)
+        sspe (optional): Pure Error Sum of Squares of the values at the Central point (type: float or int)
+        Use doe.Cp(yc).sspe() to calculate
+        For more info: help(doe.Cp.sspe)
         
         dof (optional): Degrees of freedom of the central point (type: int)
-        Use pde.CP(yc,k).dof_pqes()
-        For more info: help(pde.CP.df_pqes)
+        Use doe.Cp(yc,k).dof_sspe()
+        For more info: help(doe.CP.df_sspe)
         
         NOTE! THIS FEATURE IS STILL IN DEVELOPMENT AND DOES NOT FUNCTION WHEN THERE ARE DATA REPLICATES!
         
@@ -288,7 +297,7 @@ class regression_analysis:
         
         model_coefficients: Returns a list with the model coefficients, with insignificant coefficients having null value.
         
-        recalculate_coefs: Returns a pandas.DataFrame with the significant model coefficients
+        recalculate_coeffs: Returns a pandas.DataFrame with the significant model coefficients
         
         regression_results: Master function that creates a regression model and adjusts it through Analysis of Variance
         For more info: help(pde.regression.regression_results)
@@ -346,7 +355,7 @@ class regression_analysis:
     def __array_y(self):
         return self.y.values
     
-    def __calculate_var_coefs(self):
+    def __calculate_var_coeffs(self):
         """
         Return coeficients variance values
         
@@ -363,19 +372,19 @@ class regression_analysis:
         return np.matmul(np.linalg.inv(np.matmul(self.__matrix_X().T,self.__matrix_X())),
                          self.__matrix_X().T*self.__array_y()).T
     
-    def calculate_coefs(self):
+    def calculate_coeffs(self):
         """Return the sum of restult of the definition: "__matrix_coef" """
         return np.einsum('ij->j', self.__calculate_matrix_coef()).round(5)
     
     
     def __calculate_pred_values(self):
         """Retunr the values of predict by the model"""
-        return np.matmul(self.X,self.calculate_coefs())
+        return np.matmul(self.X,self.calculate_coeffs())
     
  
     def predict(self, value=0):
         """Retunr the values of predict by the model"""
-        return np.matmul(self.X,self.calculate_coefs()+value)
+        return np.matmul(self.X,self.calculate_coeffs()+value)
     
     def __calculate_residuals(self):
         """Retunr the residuals values of predict by the model"""
@@ -524,19 +533,19 @@ class regression_analysis:
         axs0[0,0].set_title('MQ Regression',fontweight='black')
         axs0[0,0].text(-.35, 200, '%.1f'%self.__calculate_MSreg(), fontsize=20,color='white')
 
-        axs0[0,1].bar('MSRes e t',self.__calculate_MSres(),color='darkorange')
+        axs0[0,1].bar('MSRes and t',self.__calculate_MSres(),color='darkorange')
         axs0[0,1].set_title('MQ Residual',fontweight='black')
-        axs0[0,1].text(-.35,.5, '%.1f  %.3f'%(self.__calculate_MSres(),CP().invt(self.__df_SSres()-1)), fontsize=20,color='k')
-        #axs0[0,1].text(-.35, 2.07, '%.4f'%CP().invt(self.__df_SSres()-1), fontsize=20,color='k')
+        axs0[0,1].text(-.35,.5, '%.1f  %.3f'%(self.__calculate_MSres(),Cp().invt(self.__df_SSres()-1)), fontsize=20,color='k')
+        #axs0[0,1].text(-.35, 2.07, '%.4f'%Cp().invt(self.__df_SSres()-1), fontsize=20,color='k')
 
         axs0[1,0].bar('MSPE',3, color= 'darkred')
         axs0[1,0].set_title('MS of Pure Error',fontweight='black')
         axs0[1,0].text(-.35, 1.27,'%.2f'%self.__calculate_MSPE(), fontsize=20,color='w')
 
-        axs0[1,1].bar('MSLoF e t',3,color= 'darkviolet')
+        axs0[1,1].bar('MSLoF and t',3,color= 'darkviolet')
         axs0[1,1].set_title('MS of Lack of Fit',fontweight='black')
         axs0[1,1].text(-.35, 1.98, '%.1f'%self.__calculate_MSLoF(), fontsize=20,color='w')
-        axs0[1,1].text(-.35, 1.07, '%.4f'%CP().invt(self.__df_SSLof()), fontsize=20,color='w')
+        axs0[1,1].text(-.35, 1.07, '%.4f'%Cp().invt(self.__df_SSLof()), fontsize=20,color='w')
 
         
         #F2-test
@@ -576,7 +585,7 @@ class regression_analysis:
         axs3[1].axhline(1,color='k')
         
      
-        fig.suptitle('ANOVA (Analisys of Variance)', fontsize=20, fontweight='black',y=1.05)
+        fig.suptitle('ANOVA (Analisys of Variance)', fontsize=18, fontweight='black',y=1.05)
         plt.savefig('ANOVA (Analisys of Variance).png',transparent=True)
 
       
@@ -611,33 +620,33 @@ class regression_analysis:
             return True
     
     
-    def define_ic_coefs(self,msg=False): #decides if will calculate ic mslof or msres
+    def define_ic_coeffs(self,msg=False): #decides if will calculate ic mslof or msres
         if self.self_check == False:
             check_answer = self.__check_model() #Returns True or False through this method
         elif self.self_check == True:
             check_answer = self.__self_turning(msg)
         else:
-            raise TypeError('"doe.regression_analysis().resgression_results()" one of argument is missing for "self.check".')
+            raise TypeError('"doe.RegressionAnalysis().resgression_results()" one of argument is missing for "self.check".')
            
         if check_answer == True:
-            regression_analysis.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
+            RegressionAnalysis.__check_ci = True # this change will be important in recalculate_model function for decide confidence interval
             return self.__define_ic_MSLoF() # to calculate interval confidence for lack of fit
         elif check_answer == False:
-            regression_analysis.__check_ci = False # this change will be important in recalculate_model function for decide confidence interval
+            RegressionAnalysis.__check_ci = False # this change will be important in recalculate_model function for decide confidence interval
             return self.__define_ic_MSRes() #to calculate interval confidence for residues 
         
     def show_ci(self, manual=None):
         """Absolute values of model's confident interval"""
-        if regression_analysis.__check_ci == True or manual ==True:
+        if RegressionAnalysis.__check_ci == True or manual ==True:
             return self.__define_ic_MSLoF()
-        elif  regression_analysis.__check_ci == False or manual == False:
+        elif  RegressionAnalysis.__check_ci == False or manual == False:
             return self.__define_ic_MSRes()
     
     def __define_ic_MSLoF(self): #calculates confidence interval for mslof
-        return (((self.__calculate_MSLoF()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSLof()-1)).round(4)
+        return (((self.__calculate_MSLoF()*self.__calculate_var_coeffs())**0.5)*Cp().invt(self.__df_SSLof()-1)).round(4)
         
     def __define_ic_MSRes(self): #calculates confidence interval for msresN
-        return (((self.__calculate_MSres()*self.__calculate_var_coefs())**0.5)*CP().invt(self.__df_SSres()-1)).round(4)
+        return (((self.__calculate_MSres()*self.__calculate_var_coeffs())**0.5)*Cp().invt(self.__df_SSres()-1)).round(4)
     
     def plot_graphs_regression(self):
         """
@@ -660,6 +669,7 @@ class regression_analysis:
         # subfigs = fig.subfigures(2, 2, wspace=0.07, width_ratios=[1.4, 1.])
 
         fig = plt.figure(figsize=(10,14)) # This work better in windows
+        # fig.subplots_adjust(top=0.95, hspace=0.5, wspace=0.4)
         spec = fig.add_gridspec(3, 2)
         fig.tight_layout()
       
@@ -694,14 +704,14 @@ class regression_analysis:
         
         axs3 =  fig.add_subplot(spec[2, :])
         
-        axs3.errorbar(self.X.columns,self.calculate_coefs(),self.define_ic_coefs(True), fmt='^', linewidth=2, capsize=6, color='darkred')
+        axs3.errorbar(self.X.columns,self.calculate_coeffs(),self.define_ic_coeffs(True), fmt='^', linewidth=2, capsize=6, color='darkred')
         axs3.axhline(0,color='darkred', linestyle='dashed')
         axs3.set_ylabel('Coefficient Values')
         axs3.set_xlabel('Coefficient')
         axs3.set_title('Regression of Coefficients',fontweight='black')
         axs3.grid()
         
-        fig.suptitle('Regression Model'+'\n' + '-- regression_analysis --', fontsize=20, fontweight='black',y=1.1)
+        fig.suptitle('Regression Model', fontsize=18, fontweight='black',y=0.95)
         plt.savefig('Regression Model.png',transparent=True)
         
         return plt.show()
@@ -709,85 +719,83 @@ class regression_analysis:
     
     # Recalculate the model and to variables insignificant excludes automatically    
     
-    def dict_coefs_ci(self): #list with dicts {'coefs':values,'coefs_max':values,'coefs_min':values}
-        return  [dict(zip(self.X.columns, self.calculate_coefs())),
-                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[0].round(4))),
-                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coefs()[1].round(4)))]
+    def dict_coeffs_ci(self): #list with dicts {'coeffs':values,'coeffs_max':values,'coeffs_min':values}
+        return  [dict(zip(self.X.columns, self.calculate_coeffs())),
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coeffs()[0].round(4))),
+                 dict(zip(self.X.columns, self.__calculate_inter_max_min_coeffs()[1].round(4)))]
     
-    def recalculate_coefs(self):  #returns an array with coefs values and coefs insignificants equal zero 
+    def recalculate_coeffs(self):  #returns an array with coeffs values and coeffs insignificants equal zero 
         """Return a DataFrame with significants coefficients"""
-        return self.__delete_coefs_insignificants_matrix()
+        return self.__delete_coeffs_insignificants_matrix()
        
-    def __calculate_inter_max_min_coefs(self): #returns a tuple with (coef+ci,coef-ci)
-        if regression_analysis.__check_ci == True:
-            return [self.calculate_coefs() + self.__define_ic_MSLoF(), 
-                            self.calculate_coefs() - self.__define_ic_MSLoF()]
-        elif  regression_analysis.__check_ci == False:
-            return [self.calculate_coefs() + self.__define_ic_MSRes(),
-                            self.calculate_coefs() - self.__define_ic_MSRes()] 
+    def __calculate_inter_max_min_coeffs(self): #returns a tuple with (coef+ci,coef-ci)
+        if RegressionAnalysis.__check_ci == True:
+            return [self.calculate_coeffs() + self.__define_ic_MSLoF(), 
+                            self.calculate_coeffs() - self.__define_ic_MSLoF()]
+        elif  RegressionAnalysis.__check_ci == False:
+            return [self.calculate_coeffs() + self.__define_ic_MSRes(),
+                            self.calculate_coeffs() - self.__define_ic_MSRes()] 
     
         
-    def __delete_coefs_insignificants(self): #select (coef - ci <= coef <= coef + ci) and replace for zero
-        coefs = self.dict_coefs_ci()[0]
-        max_ = self.dict_coefs_ci()[1]
-        min_ = self.dict_coefs_ci()[2]
-        for coef in coefs.keys():
+    def __delete_coeffs_insignificants(self): #select (coef - ci <= coef <= coef + ci) and replace for zero
+        coeffs = self.dict_coeffs_ci()[0]
+        max_ = self.dict_coeffs_ci()[1]
+        min_ = self.dict_coeffs_ci()[2]
+        for coef in coeffs.keys():
             if min_[coef]<= 0 <= max_[coef]:
-                coefs[coef] = 0
-        return coefs
+                coeffs[coef] = 0
+        return coeffs
     
-    def model_coefients(self):
+    def model_coeffients(self):
         """Return a values list with significants coefficients and null values for insignificants coefficients"""
-        return list(self.__delete_coefs_insignificants().values())
+        return list(self.__delete_coeffs_insignificants().values())
             
         
-    def __delete_coefs_insignificants_matrix(self):
-        coefs_recalculate = self.__delete_coefs_insignificants()
-        for coef in self.__delete_coefs_insignificants().keys(): # scroll through dictionary keys
-            if coefs_recalculate[coef] == 0: # values coef equal zero multiplies the column in matrix X  
+    def __delete_coeffs_insignificants_matrix(self):
+        coeffs_recalculate = self.__delete_coeffs_insignificants()
+        for coef in self.__delete_coeffs_insignificants().keys(): # scroll through dictionary keys
+            if coeffs_recalculate[coef] == 0: # values coef equal zero multiplies the column in matrix X  
                 del self.X[coef] #save in local variable for process
         return self.X # changes atribute default
     
         
-    def __executor_regression2(self):
+    def __executor_regression(self):
         self.create_table_anova()
         self.plot_graphs_anova()
         self.plot_graphs_regression()
     
     def save_dataset(self):
-        file = pd.ExcelWriter('dataset.xlsx')
-        #coefficientes and confident interval 
-        coefs_ci = pd.DataFrame({'Coef': self.model_coefients(),
-                                 'coefs-ci':self.model_coefients()-self.define_ic_coefs(),
-                                 'coefs+ci':self.model_coefients()+self.define_ic_coefs(),
-                                 'C.I': self.define_ic_coefs(),}, index=self.X.columns)
+        file_path = 'dataset.xlsx'
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
         
-        # anova
-        anova = pd.DataFrame([
-        [' Regression: ',self.__calculate_SSreg(),self.__df_SSreg(),self.__calculate_MSreg(),self.__ftest1() ],
-        [' Residual: ',self.__calculate_SSres(), self.__df_SSres(),self.__calculate_MSres(),self.__ftest1()],
-        [' Total: ', self.__calculate_SSTot(), self.__df_SSTot(),self.__calculate_MSTot(), ' F2-Test '],
-        [' Pure Error: ',self.SSPE, self.df, self.__calculate_MSPE(),self.__ftest2() ],
-        [' Lack of Fit: ', self.__calculate_SSLoF(), self.__df_SSLof(), self.__calculate_MSLoF(), ' F-Tabulated '],
-        [' R²: ', self.__calculate_R2(), ' R: ', self.__calculate_R(), self.__ftable1() ],
-        [' R² max: ',self.__calculate_R2_max(), ' R max: ', self.__calculate_R_max(),self.__ftable2()]
-        ], columns=['Parameters','Sum of Squares (SS)','Degrees of Freedom (DoF)','Mean Square (MS)','F1-Test'])
-        
-        # predict versus experimental x coefficients
-        pred_exp = pd.DataFrame(self.__matrix_X(), columns=self.X.columns)
-        pred_exp['Experimental'] = self.y
-        pred_exp['Predict'] = self.__calculate_pred_values()
-        
-        #salving data in different files
-        # anova.to_excel('ANOVA.xlsx')
-        # coefs_ci.to_excel('coefs_ic.xlsx')
-        # pred_exp.to_excel('exp_pred.xlsx')
-
-        #salving data in same file
-        anova.to_excel(file,sheet_name= 'ANOVA')
-        coefs_ci.to_excel(file,sheet_name='coefs_ic')
-        pred_exp.to_excel(file,sheet_name='exp_pred')
-        return file.save()
+            #coefficientes and confident interval 
+            coeffs_ci = pd.DataFrame({
+                'Coef': self.model_coeffients(),
+                'coeffs-ci':self.model_coeffients()-self.define_ic_coeffs(),
+                'coeffs+ci':self.model_coeffients()+self.define_ic_coeffs(),
+                'C.I': self.define_ic_coeffs(),}, index=self.X.columns)
+            coeffs_ci.to_excel(writer, sheet_name='coeffs_ic')
+            
+            # anova
+            anova = pd.DataFrame([
+                [' Regression: ',self.__calculate_SSreg(),self.__df_SSreg(),self.__calculate_MSreg(),self.__ftest1() ],
+                [' Residual: ',self.__calculate_SSres(), self.__df_SSres(),self.__calculate_MSres(),self.__ftest1()],
+                [' Total: ', self.__calculate_SSTot(), self.__df_SSTot(),self.__calculate_MSTot(), ' F2-Test '],
+                [' Pure Error: ',self.SSPE, self.df, self.__calculate_MSPE(),self.__ftest2() ],
+                [' Lack of Fit: ', self.__calculate_SSLoF(), self.__df_SSLof(), self.__calculate_MSLoF(), ' F-Tabulated '],
+                [' R²: ', self.__calculate_R2(), ' R: ', self.__calculate_R(), self.__ftable1() ],
+                [' R² max: ',self.__calculate_R2_max(), ' R max: ', self.__calculate_R_max(),self.__ftable2()]
+            ], columns=['Parameters','Sum of Squares (SS)','Degrees of Freedom (DoF)','Mean Square (MS)','F1-Test'])
+            anova.to_excel(writer, sheet_name='ANOVA')
+            
+            # predict versus experimental x coefficients
+            pred_exp = pd.DataFrame(self.__matrix_X(), columns=self.X.columns)
+            pred_exp['Experimental'] = self.y
+            pred_exp['Predict'] = self.__calculate_pred_values()
+            pred_exp.to_excel(writer, sheet_name='exp_pred')
+                
+        print("dataset.xlsx was saved on your directory")
+        return file_path
     
     
     def regression_results(self):
@@ -807,13 +815,13 @@ class regression_analysis:
         
         y: Response that will be modeled (type: pandas.Series)
         
-        pqes (optional): Pure Error Sum of Squares of the values at the Central point (type: float or int)
-        Use pde.CP(yc).pqes() to calculate
-        For more info: help(pde.CP.pqes)
+        sspe (optional): Pure Error Sum of Squares of the values at the Central point (type: float or int)
+        Use doe.Cp(yc).sspe() to calculate
+        For more info: help(doe.Cp.sspe)
         
         dof (optional): Degrees of freedom of the central point (type: int)
-        Use pde.CP(yc,k).dof_pqes()
-        For more info: help(pde.CP.df_pqes)
+        Use pde.Cp(yc,k).dof_sspe()
+        For more info: help(doe.Cp.df_sspe)
         
         NOTE! THIS FEATURE IS STILL IN DEVELOPMENT AND DOES NOT FUNCTION WHEN THERE ARE DATA REPLICATES!
         
@@ -837,28 +845,29 @@ class regression_analysis:
         
         """
         
-        self.__executor_regression2()
+        self.__executor_regression()
         if self.auto == True:
-            self.recalculate_coefs()
-            self.__executor_regression2()
-            return print(regression_analysis.__final_msg)
+            self.recalculate_coeffs()
+            self.__executor_regression()
+            return print(RegressionAnalysis.__final_msg)
         else:
-            return print(regression_analysis.__final_msg)
+            return print(RegressionAnalysis.__final_msg)
         
         
-class Super_fabi:
+class Surface: 
     """
-    Funcao para calcular superficie de resposta e gráfico de contorno
-    A matriz X deve conter:
-    Coluna 1 = coeficientes na seguinte ordem, b0, b1, b2, b11, b22, b12
-    Coluna 2 = Valores codificados da variavel 1
-    Coluna 3 = Valores reais da variável 1
-    Coluna 4 = Valores codificados da variavel 2
-    Coluna 5 = Valores reais da variavel 2
+    Class --> Surface (coeffs, realmax1, realmin1, realmax2, realmin2, codmax1, codmin1, codmax2, codmin2 ) to calculating the surface graph and contour chart
+    TThe matrix must contain the following columns:
+    Column 1 = coefficients in the following sequence: b0, b1, b2, b11, b22, b12
+    Column 2 = encoded values for variable 1
+    Column 3 = real values for variable 1
+    Column 4 = encoded values for variable 2
+    Column 5 = real values for variable 2
+
     """
-    def __init__(self, coefs:list,realmax1=None,realmin1=None,realmax2=None,realmin2=None,
+    def __init__(self, coeffs:list,realmax1=None,realmin1=None,realmax2=None,realmin2=None,
                  codmax1=None,codmin1=None,codmax2=None,codmin2=None):
-        self.coefs = coefs
+        self.coeffs = coeffs
         self.realmax1 = realmax1
         self.realmin1 = realmin1
         self.realmax2 = realmax2
@@ -890,33 +899,33 @@ class Super_fabi:
     def z(self, meshgrid=None, x=None, y=None, manual=False):
     
         """
-        Retorna valor previsto pelo modelo.
+        Return predict values from model.
         
         Parameters 
         -----------
         
-        v1: valor(es) da variável 1 (if meshgrid is True --> type numpy.array else: type float)
+        v1: values of variable 1 (if meshgrid is True --> type numpy.array else: type float)
         
-        v2: valor(es) da variável 2 (if meshgrid is True --> type numpy.array else: type float)
+        v2: values of variable 2 (if meshgrid is True --> type numpy.array else: type float)
         
-        n_var: número de variáveis a serem analisadas, por padrão n_var=2 
+        n_var: number of variables to be analysed. Default n_var=2 
         
         meshgrid: (optional) (if meshgrid == True --> will be  created a matrix with Z values else: returns only a item type float)
 
         manual: (optional) (if manual is True --> will be calculate z value for x and y parameters ) (type:bool)
         
         """
-        b0, b1, b2, b11, b22, b12 = self.coefs
+        b0, b1, b2, b11, b22, b12 = self.coeffs
         
         
         if manual == True: # if manual mode to be activate
             if x == None or y == None: # check parameters for manual mode
-                raise TypeError('recalculate_coefs() está faltando 2 argumentos posicionais requirido "x" e "y".')
+                raise TypeError('recalculate_coeffs() 2 required positional arguments "x" and "y" are missing.')
             else:       
                     return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
                     
         elif meshgrid == None and manual == False:
-            raise TypeError('Insira parâmetros ao método.')
+            raise TypeError('Insert parameters to the method.')
             
         try:
             if meshgrid == True:
@@ -926,7 +935,7 @@ class Super_fabi:
                 x, y = self.array_n1(), self.array_n2()
                 return (b0 + b1*x + b2*y + b11*x**2 + b22*y**2 + b12*x*y).round(4)
                     
-        except: raise TypeError('recalculate_coefs() está faltando 1 argumento posicional requirido "meshgrid".')
+        except: raise TypeError('recalculate_coeffs() 1 required positional arguments "meshgrid" is missing.')
 
     def __index_max_values(self): # Return matrix meshgrid index for max value model
         idx1, idx2 = np.where(self.z(meshgrid=True) == self.z(meshgrid=True).max().max())
@@ -934,12 +943,13 @@ class Super_fabi:
     
     @property
     def maxcod(self):
-        """Retorna valores das coordenadas do sinal máximo para as variáveis codificadas.
-        
+        """
+        Returns values ​​of the maximum signal coordinates for the encoded variables.
+                
         Returns 
         ----------
         
-        (x_coordenate, y_coordenate) for codificates values  like a tuple.
+        (x_coordenate, y_coordenate) for codificates values like a tuple.
         
         """
         idx1, idx2 = self.__index_max_values()[0], self.__index_max_values()[1]
@@ -948,7 +958,7 @@ class Super_fabi:
     
     @property
     def maxreal(self):
-        """Retorna valores das coordenadas do sinal máximo para as variáveis codificadas.
+        """Returns values ​​of the maximum signal coordinates for the encoded variables.
         
         Returns 
         ----------
@@ -961,7 +971,7 @@ class Super_fabi:
  
     @property
     def zmax(self):
-        r"""Retorna o valor do sinal máximo do modelo.
+        """Returns the maximum signal value of the model.
         
         Return
         --------
@@ -972,119 +982,165 @@ class Super_fabi:
     
     
  
-    def __etiqueta(self,matrix_X, vector_y, ax):
+    def __tag(self,matrix_X, vector_y, ax):
         vector_y = [str(j) for j in vector_y.values] # vector_y to string list 
                
         for i, label in enumerate(vector_y):
             ax.annotate(label,( matrix_X['b1'][i], matrix_X['b2'][i]),color='k',fontsize=10)  
     
-    def superficie(self, matrix_X = None, vector_y = None,scatter=False):
-        """Retorna os gráficos de superfície e de contorno do modelo
+    def surface_results(self, matrix_X = None, vector_y = None,scatter=False):
+        """Return surface graph and countour chart
         
         Parameters
         ------------
         
-        X: matriz X com os valores codificados dos coeficiente (type: pandas.dataframe)
+        X: matrix X with encoded values of coefficient (type: pandas.dataframe)
         
-        y: vetor y com os valores de sinais 
+        y: vector y with signal values
         
         """
         fig = plt.figure(figsize=(12,12))
         
-        # Superficie de resposta
+        # Superface result
         ax1 = fig.add_subplot(1,2, 1, projection='3d')
 
         
         V1, V2= self.meshgrid_real()
         Z = self.z(meshgrid=True)
-        b0, b1, b2, b11, b22, b12 = self.coefs
+        b0, b1, b2, b11, b22, b12 = self.coeffs
         
         surf =  ax1.plot_surface(V1, V2, Z, rstride=1, cstride=1,cmap='viridis', edgecolor='none')
         
-        ax1.set_title('Superfície de Resposta do Modelo',fontsize=12, fontweight='black',y=1,x=.55)
-        ax1.set_xlabel('Variável 1')
-        ax1.set_ylabel('Variável 2')
-        ax1.set_zlabel('Resposta do Modelo')
+        ax1.set_title('Model Surface',fontsize=12, fontweight='black',y=1,x=.55)
+        ax1.set_xlabel('Variable 1')
+        ax1.set_ylabel('Variable 2')
+        ax1.set_zlabel('Model Predict')
         
-        # Contorno 
+        # Contour
         v1, v2= self.meshgrid_cod()
         
         ax2 = fig.add_subplot(1,2,2)
         
         contours = ax2.contour(v1, v2, Z, 3,colors='black', levels=6)
+        # contours = ax2.contour(V1, V2, Z, 3,colors='black', levels=6) #change for real values, maybe
         ax2.clabel(contours, inline=True, fontsize=12)
         plt.imshow(Z, extent=[self.codmin1, self.codmax1, self.codmax2, self.codmin2],  cmap='viridis', alpha=1)
+        # plt.imshow(Z, extent=[self.realmin1, self.realmax1, self.realmax2, self.realmin2],  cmap='viridis', alpha=1)
         plt.colorbar(aspect=6, pad=.15)
         
         
         if scatter == True:
             if isinstance(matrix_X,object):
                 ax2.scatter(matrix_X['b1'],matrix_X['b2'], color='w',marker=(5, 1),s=50)
-                self.__etiqueta(matrix_X, vector_y, ax2)
+                self.__tag(matrix_X, vector_y, ax2)
         
         ax2.scatter(self.maxcod[0], self.maxcod[1], color='darkred',marker=(5, 1),s=100)   
         ax2.annotate(r'$z_{max}= %.2f$'%self.zmax, (self.maxcod[0], self.maxcod[1]),color='k')
         
         ax2.set_xticks(list(np.arange(self.codmin1,round((2*self.codmax1),4),step=self.codmax1)) + [round(self.maxcod[0],3)])
         ax2.set_yticks(list(np.arange(self.codmin2,round((2*self.codmax2),4),step=self.codmax2)) + [round(self.maxcod[1],3)])
-        ax2.set_xlabel('Variável 1')
-        ax2.set_ylabel('Variável 2')
-        ax2.set_title('Contorno do Modelo',fontsize=12, fontweight='black',y=1.1)
-        
-        fig.text(0.2,.71,r'$R_{max}(%.2f,%.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f $'%(self.maxcod[0],self.maxcod[1],self.zmax,self.maxreal[0],self.maxreal[1]),
-                 fontsize=15,horizontalalignment='left')
-        plt.suptitle(r'$\bfResposta = {} + {}v_1 + {}v_2 + {}v_1^2 + {}v_2^2 + {}v_1v_2 $'.format(b0, b1, b2, b11, b22, b12),y=.77,x=.45,fontsize=20)
-        
-        plt.savefig('super_fabi.png', transparent=True) 
+        ax2.set_xlabel('Variable 1')
+        ax2.set_ylabel('Variable 2')
+        ax2.set_title('Contour Chart of Model',fontsize=12, fontweight='black',y=1.1)
+
+        #print and save
+        fig.text(0.2, 0.71, r'$R_{max}(%.2f, %.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f$' % (self.maxcod[0], self.maxcod[1], self.zmax, self.maxreal[0], self.maxreal[1]),
+        fontsize=15, horizontalalignment='left')
+
+        plt.suptitle(r'$f(v) = {} + {}v_1 + {}v_2 + {}v_1^2 + {}v_2^2 + {}v_1v_2$'.format(b0, b1, b2, b11, b22, b12),y=0.77, x=0.45, fontsize=15)
+
         plt.tight_layout(w_pad=5)
+        plt.savefig('surface.png', transparent=True) 
         plt.show()
+
+    #def #adicionar a funcionalidade de interagir e rotacionar o gráfico de superfície utilizando o plotly.graph_objs as go
+        # def surface_rotate (self, matrix_X=None, vector_y=None, scatter=False):
+        #     # Assuming self.meshgrid_real() and self.z(meshgrid=True) return necessary data
+        #     V1, V2 = self.meshgrid_real()
+        #     Z = self.z(meshgrid=True)
+        #     b0, b1, b2, b11, b22, b12 = self.coeffs
+    
+        #     # Criar figura de superfície no Plotly
+        #     surface_plot = go.Figure(data=[go.Surface(x=V1, y=V2, z=Z, colorscale='Viridis')])
+    
+        #     # Configurar layout da superfície
+        #     surface_plot.update_layout(
+        #         title='Model Surface',
+        #         scene=dict(
+        #             xaxis_title='Variable 1',
+        #             yaxis_title='Variable 2',
+        #             zaxis_title='Model Predict',
+        #             camera=dict(
+        #                 up=dict(x=0, y=0, z=1),
+        #                 center=dict(x=0, y=0, z=0),
+        #                 eye=dict(x=1.25, y=1.25, z=1.25)
+        #             ),
+        #             aspectratio=dict(x=1, y=1, z=0.7),
+        #             aspectmode='manual'
+        #         )
+        #     )
+
+        #     # Adicionar gráfico de dispersão se scatter=True
+        #     if scatter:
+        #         # Adicionar um gráfico de dispersão 3D
+        #         scatter_data = go.Scatter3d(
+        #             x=matrix_X.iloc[:, 0],
+        #             y=matrix_X.iloc[:, 1],
+        #             z=vector_y,
+        #             mode='markers',
+        #             marker=dict(size=5, color='red')
+        #         )
+        #         surface_plot.add_trace(scatter_data)
+            
+        #     # Mostrar o gráfico de superfície
+        #     surface_plot.show()
         
 
     def solver_diff(self, k=2, printf=False):
-        """Método que retorna o valor máximo de resposta e os respectivos valores codificados das variáveis exploratórias do modelo através dos cálculos das derivada parciais de primeira ordem. 
-        Selecione o número de variáveis através do parâmetro k. 
-        Esta função é capaz de calcular para modelos com 2,3 ou 4 variáveis. 
+        """Method that returns the maximum response value and the respective coded values ​​of the model's exploratory variables through calculations of first-order partial derivatives. 
+        Select the number of variables using the k parameter. 
+        This function is capable of calculating for models with 2,3 or 4 variables. 
 
         Parameters
         ------------
 
-        k: número de variáveis do modelo (type: int) 
+        k: number of model variables (type: int) 
 
-        printf (optional): Por padrão (False), será retornado valores de coordendas e resposta máxima em uma tupla e quando printf=True será retornado uma mensagem com as resposta em um display em linguagem Latex. 
+        printf (optional): By default (False), it will return coordinate values and the maximum response in a tuple. When printf=True, it will return a message with the responses displayed in Latex language.
 
         Returns
         ------------
-        Retorna valores das coordenadas exploratórias para o máximo global do modelo através da derivada parcial.
+        Returns values ​​of the exploratory coordinates for the global maximum of the model through the partial derivative.
         """
         v1,v2,v3,v4 = symbols('v1 v2 v3 v4', real=True) 
         
         try:
             if k == 2:           
-                b0, b1, b2, b11, b22, b12 = self.coefs
+                b0, b1, b2, b11, b22, b12 = self.coeffs
                 f = b0 + b1*v1 + b2*v2 + b11*v1**2 + b22*v2**2 + b12*v1*v2
                 X = np.matrix([
                      [2*b11,b12],
                      [b12,2*b22]])
-                y = -np.array(self.coefs[1:3])
+                y = -np.array(self.coeffs[1:3])
 
-                p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
+                p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y matrix and vector multiplication (v1,v2,v3,v4)
                 fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1])])
 
-                resultados = np.append(p_diff,fmax)
+                results = np.append(p_diff,fmax)
                 
                 if printf == False:
-                    return pd.DataFrame({'Resultados':resultados},index=['b1','b2','Resposta'])
+                    return pd.DataFrame({'Results':results},index=['b1','b2','Awnser'])
                 else:
                     return display(Latex("$$f'({0:.3f},{1:.3f})= {2:.2f}$$".format(p_diff[0],p_diff[1],fmax)))
 
             elif k == 3:   
-                b0, b1, b2, b3, b11, b22, b33, b12, b13, b23 = self.coefs
+                b0, b1, b2, b3, b11, b22, b33, b12, b13, b23 = self.coeffs
                 f = b0 + b1*v1 + b2*v2 + b3*v3 + b11*v1**2 + b22*v2**2 + b33*v3**2 + b12*v1*v2 + b13*v1*v3 + b23*v2*v3
                 X = np.matrix([
                      [2*b11,b12,b13],
                      [b12,2*b22,b23],
                      [b13,b23,2*b33]])
-                y = -np.array(self.coefs[1:4])
+                y = -np.array(self.coeffs[1:4])
 
                 p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
                 fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1]),(v3,p_diff[2])])
@@ -1092,19 +1148,19 @@ class Super_fabi:
                 resultados = np.append(p_diff,fmax)
 
                 if printf == False:
-                    return pd.DataFrame({'Resultados':resultados},index=['b1','b2','b3','Resposta'])
+                    return pd.DataFrame({'Results':results},index=['b1','b2','b3','Answer'])
                 else:
                     return display(Latex("$$f'({0:.3f},{1:.3f},{2:.3f})= {3:.2f}$$".format(p_diff[0],p_diff[1],p_diff[2],fmax)))
 
             elif k == 4:  
-                b0, b1, b2, b3, b4, b11, b22, b33, b44, b12, b13, b14, b23, b24, b34 = self.coefs
+                b0, b1, b2, b3, b4, b11, b22, b33, b44, b12, b13, b14, b23, b24, b34 = self.coeffs
                 f=b0+b1*v1+b2*v2+b3*v3+b4*v4+b11*v1**2+b22*v2**2+b33*v3**2+b44*v4**2+b12*v1*v2+b13*v1*v3+b14*v1*v4+b23*v2*v3+b24*v2*v4+b34*v3*v4
                 X = np.matrix([
                      [2*b11,b12,b13,b14],
                      [b12,2*b22,b23,b24],
                      [b13,b23,2*b33,b34],
                      [b14,b24,b34,2*b44]])
-                y = -np.array(self.coefs[1:5])
+                y = -np.array(self.coeffs[1:5])
 
                 p_diff = np.array(np.matmul(np.linalg.inv(X),y))[0] #inv(X)*y multiplicação de matriz e vetor (v1,v2,v3,v4)
                 fmax = f.subs([(v1,p_diff[0]),(v2,p_diff[1]),(v3,p_diff[2]),(v4,p_diff[3])])
@@ -1112,8 +1168,47 @@ class Super_fabi:
                 resultados = np.append(p_diff,fmax)
 
                 if printf == False:
-                    return pd.DataFrame( {'Resultados':resultados},index=['b1','b2','b3','b4','Resposta'])
+                    return pd.DataFrame( {'Results':results},index=['b1','b2','b3','b4','Answer'])
                 else:
                     return display(Latex("$$f'({0:.4f},{1:.3f},{2:.3f},{3:.3f})= {4:.2f}$$".format(p_diff[0],p_diff[1],p_diff[2],
                                                                                                    p_diff[3],fmax)))
-        except: raise TypeError(f'Não há registro para solução da equação para "k == {k}"')
+        except: raise TypeError(f'There is no record for solving the equation for "k == {k}"')
+
+class DataPrint:
+    """
+    Class to print the variables set
+    DataPrint(X,y,yc,effect_error,t)
+    If you doon't have the central points
+    
+    """
+
+    def __init__(self, **kwargs):
+        self.X = kwargs.get('X', None)
+        self.y = kwargs.get('y', None)
+        self.yc = kwargs.get('yc', None)
+        # self.effect_error = kwargs.get('effect_error', None)
+        # self.t = kwargs.get('t', None)
+
+    def variables(self):
+        if self.X is not None:
+            display(Markdown('**Matrix X**'))
+            print(self.X)
+        else:
+            display(Markdown('**Check if Matrix X is set**'))
+        print()
+
+        if self.y is not None:
+            display(Markdown('**Vector y**'))
+            print(self.y)
+        else:
+            display(Markdown('**Check if Vector y is set**'))
+        print()
+
+        if self.yc is not None:
+            display(Markdown('**The Central Points are:**'))
+            print(self.yc)
+        else:
+            display(Markdown('**Check if yc replica is set**'))
+        print()
+
+    # def statistical_values
