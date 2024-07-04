@@ -5,13 +5,13 @@ Features
 
 Currently, the library includes the following functionalities:
 
-    Screening of Significant Effects: Identify the most influential factors in your experiments.
-    ANOVA Table: Generate an ANOVA table to analyze the differences among group means.
-    Regression Analysis: Perform regression analysis to model the relationship between variables.
-    Response Surface Methodology (RSM): Create response surface models to explore the relationships between several explanatory variables and one or more response variables.
+1) Screening of Significant Effects: Identify the most influential factors in your experiments.
+2) ANOVA Table: Generate an ANOVA table to analyze the differences among group means.
+3) Regression Analysis: Perform regression analysis to model the relationship between variables.
+4) Response Surface Methodology (RSM): Create response surface models to explore the relationships between several explanatory variables and one or more response variables.
 
 New Features
 
-    Experimental Evaluation without Central Points: Capability to evaluate experiments that do not include central points.
-    Interactive Surface Modeling: Use matplotlib and mpl_toolkits.mplot3d for interactive surface modeling, allowing for dynamic visualization and exploration of the response surfaces.
+1) Experimental Evaluation without Central Points: Capability to evaluate experiments that do not include central points.
+2) Interactive Surface Modeling: Use matplotlib and mpl_toolkits.mplot3d for interactive surface modeling, allowing for dynamic visualization and exploration of the response surfaces.
 
