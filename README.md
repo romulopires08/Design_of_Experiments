@@ -13,5 +13,5 @@ Currently, the library includes the following functionalities:
 New Features
 
 1) Experimental Evaluation without Central Points: Capability to evaluate experiments that do not include central points.
-2) Interactive Surface Modeling: Use matplotlib and mpl_toolkits.mplot3d for interactive surface modeling, allowing for dynamic visualization and exploration of the response surfaces.
+2) Interactive Surface Modeling: Use plotly.graph_objs for interactive surface modeling, allowing for dynamic visualization and exploration of the response surfaces.
 
