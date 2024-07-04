@@ -11,6 +11,8 @@ from scipy.stats import f
 from scipy.stats import linregress
 from tabulate import tabulate
 from matplotlib.backends.backend_pdf import PdfPages
+from mpl_toolkits.mplot3d import Axes3D
+from plotly.offline import iplot
 from IPython.display import display, Latex, Markdown
 import sys                        #library for surface graph
 
@@ -163,7 +165,174 @@ class Analysis:
         """
         return plt.show(self.__graphics_analysis())
 
+    def model_equation(self):
+
+        """
+        Function -> model_equation
+        This function is designed to print and save the effect coefficient, the b0 coefficient, and the first model equation.
+        """
+        #inputs
+        avg_y = self.y.mean()
+        effects = self.__calculate_effects()
+        coefficients = effects / 2
     
+        # Construicting the DataFrame
+        data = pd.DataFrame({
+            'Coefficients': coefficients,
+            # 'Percentage': self.__calculate_percentage_effects()
+        }, index=self.__effect_indices)
+    
+        # Constructing the equation string
+        equation = f"R = {avg_y.round(5)} + {coefficients[0].round(5)}*v1 + {coefficients[1].round(5)}*v2 + {coefficients[2].round(5)}*v1v2"
+        
+        # output
+        display(data)
+        display(Markdown(f'**The intercept (b0) is equal to:** {avg_y}'))
+        display(Markdown('**Linear Equation**'))
+    
+        print(equation)
+
+    def plot_surface(self):
+        """
+        Function -> plot_surface
+        This function is designed to plot and save the surface graph for the first approximation.
+        """
+        # inputs
+        effects = self.__calculate_effects()
+        avg_y = self.y.mean()
+        coefficients = effects / 2
+    
+        # Create grid and compute Z values
+        v1 = np.linspace(-1, 1, 100)
+        v2 = np.linspace(-1, 1, 100)
+        v1, v2 = np.meshgrid(v1, v2)
+        R = avg_y + coefficients[0] * v1 + coefficients[1] * v2 + coefficients[2] * v1 * v2
+    
+        # Plotting
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_surface(v1, v2, R, cmap='viridis')
+        ax.set_xlabel('v1')
+        ax.set_ylabel('v2')
+        ax.set_zlabel('R')
+        ax.set_title('Surface Plot of the Linear Equation')
+        equation_str = r'$R = {:.5f} {:+.5f}v_1 {:+.5f}v_2 {:+.5f}v_1v_2$'.format(avg_y, coefficients[0], coefficients[1], coefficients[2])
+        plt.suptitle(equation_str, y=1, x=0.45, fontsize=15)
+        
+        # Constructing the equation string
+        equation = "Linear Equation: R = {:.5f} {:+.5f}*v1 {:+.5f}*v2 {:+.5f}*v1*v2".format(avg_y, coefficients[0], coefficients[1], coefficients[2])
+
+        #output
+        print(equation)
+        print('---------------------------------------------------------')
+        plt.show()
+        plt.savefig('Surface plot-Linear equation.png',transparent=True)
+
+    def plot_surface3D(self):
+        """
+        Function -> plot_surface
+        This function is designed to plot a 3D the surface graph for the first approximation.
+        """
+        # input
+        effects = self.__calculate_effects()
+        avg_y = self.y.mean()
+        coefficients = effects / 2
+
+        # Create grid and compute Z values
+        v1 = np.linspace(-1, 1, 100)
+        v2 = np.linspace(-1, 1, 100)
+        v1, v2 = np.meshgrid(v1, v2)
+        R = avg_y + coefficients[0] * v1 + coefficients[1] * v2 + coefficients[2] * v1 * v2
+    
+        # Create the surface plot
+        surface = go.Surface(z=R, x=v1, y=v2, colorscale='Viridis')
+        layout = go.Layout(
+            title='3D Surface Plot of the Linear Equation',
+            scene=dict(
+                xaxis=dict(title='v1'),
+                yaxis=dict(title='v2'),
+                zaxis=dict(title='R')
+            ),
+
+            width=800,  # Adjust width as needed
+            height=600,  # Adjust height as needed
+        )
+
+        # Constructing the equation string
+        equation = "Linear Equation: R = {:.5f} {:+.5f}*v1 {:+.5f}*v2 {:+.5f}*v1*v2".format(avg_y, coefficients[0], coefficients[1], coefficients[2])
+  
+        #output
+        fig = go.Figure(data=[surface], layout=layout)
+        print(equation)
+        print('---------------------------------------------------------')
+        iplot(fig)
+
+class ExpStat:
+    """
+    ExpStat(yr, n, k) - A class for calculating experimental statistics.
+
+    Attributes
+    ----------
+    yr : pd.Series
+        Values of experimental replicates.
+    n : int
+        Number of replicates.
+    k : int
+        Number of variables
+
+    Method
+    ----------
+    results(): print (Experimental Variance, Experimental Error, Effect Error and t-Student)
+    """
+    def __init__(self,yr=None, n=None, k =None):
+        self.yr = yr
+        self.n = n
+        self.k = k
+
+    def __mean_yr__(self):
+        # calculating mean of replicates
+        if self.yr is None:
+            raise ValueError("yr attribute must be specified.")
+        
+        mean_yr = self.yr.mean(axis=1)
+        return mean_yr
+
+    def __var_yr__(self):
+        # calculating variance
+        if self.yr is None:
+            raise ValueError("yr attribute must be specified.")
+        
+        var_yr = self.yr.var(axis=1)
+        return var_yr
+    def __invt__(self):
+        # calculating t-Student
+        numb_row = self.yr.shape[0] #number of rows
+        dof = (numb_row*(self.n-1)) # degree of freedom
+        
+        return t.ppf(1-.05/2,dof)
+
+    # def __calculate_sspe(self):
+    
+    #     mean_yr = np.mean(self.yr)  # Calculate mean of yr
+    #     sspe = np.sum((self.yr - mean_yr)**2)  # Calculate SSPE
+
+    #     return sspe 
+
+    def results(self):
+        exp_var = self.__var_yr__().mean()                       # experimental variance = avarege variance
+        exp_error = exp_var**0.5                                 # experimental error = sqrt(experimental variance)
+        effect_error = ((2*exp_error)/(self.n*2**self.k)**0.5)   # effect error = ((2*exp_error)/(n*2**k)**0.5)
+        t = self.__invt__()                                      # t-Student
+        # sspe = self.__calculate_sspe()                           # square sum of pure error
+
+        display(Markdown(f'**Experimental Variance:** {exp_var}'))
+        display(Markdown(f'**Experimental Error:** {exp_error}'))    
+        display(Markdown(f'**Effect Error:** {effect_error}'))
+        display(Markdown(f'**t-Student:** {t}'))
+        # display(Markdown(f'**SSPE:** {sspe}'))
+      
+
+        
 class Cp:
     """
     Class -> Cp(y, k) - Class for calculating value-t and effect_error 
