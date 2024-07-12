@@ -1,23 +1,20 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, linregress, t, f #library for regression
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 import seaborn as sns             #library for analysis
 
-from scipy.stats import t         #library for regression
-
-from scipy.stats import f
-from scipy.stats import linregress
 from tabulate import tabulate
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.mplot3d import Axes3D
 from plotly.offline import iplot
-from IPython.display import display, Latex, Markdown
+from IPython.display import display, Latex, Markdown, Math
 import sys                        #library for surface graph
 
 
 from sympy import symbols         #sympy library for symbols, diff, solve and subs
+import plotly.io as pio
 
 class Analysis: 
     
@@ -165,181 +162,14 @@ class Analysis:
         """
         return plt.show(self.__graphics_analysis())
 
-    def model_equation(self):
-
-        """
-        Function -> model_equation
-        This function is designed to print and save the effect coefficient, the b0 coefficient, and the first model equation.
-        """
-        #inputs
-        avg_y = self.y.mean()
-        effects = self.__calculate_effects()
-        coefficients = effects / 2
-    
-        # Construicting the DataFrame
-        data = pd.DataFrame({
-            'Coefficients': coefficients,
-            # 'Percentage': self.__calculate_percentage_effects()
-        }, index=self.__effect_indices)
-    
-        # Constructing the equation string
-        equation = f"R = {avg_y.round(5)} + {coefficients[0].round(5)}*v1 + {coefficients[1].round(5)}*v2 + {coefficients[2].round(5)}*v1v2"
-        
-        # output
-        display(data)
-        display(Markdown(f'**The intercept (b0) is equal to:** {avg_y}'))
-        display(Markdown('**Linear Equation**'))
-    
-        print(equation)
-
-    def plot_surface(self):
-        """
-        Function -> plot_surface
-        This function is designed to plot and save the surface graph for the first approximation.
-        """
-        # inputs
-        effects = self.__calculate_effects()
-        avg_y = self.y.mean()
-        coefficients = effects / 2
-    
-        # Create grid and compute Z values
-        v1 = np.linspace(-1, 1, 100)
-        v2 = np.linspace(-1, 1, 100)
-        v1, v2 = np.meshgrid(v1, v2)
-        R = avg_y + coefficients[0] * v1 + coefficients[1] * v2 + coefficients[2] * v1 * v2
-    
-        # Plotting
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot_surface(v1, v2, R, cmap='viridis')
-        ax.set_xlabel('v1')
-        ax.set_ylabel('v2')
-        ax.set_zlabel('R')
-        ax.set_title('Surface Plot of the Linear Equation')
-        equation_str = r'$R = {:.5f} {:+.5f}v_1 {:+.5f}v_2 {:+.5f}v_1v_2$'.format(avg_y, coefficients[0], coefficients[1], coefficients[2])
-        plt.suptitle(equation_str, y=1, x=0.45, fontsize=15)
-        
-        # Constructing the equation string
-        equation = "Linear Equation: R = {:.5f} {:+.5f}*v1 {:+.5f}*v2 {:+.5f}*v1*v2".format(avg_y, coefficients[0], coefficients[1], coefficients[2])
-
-        #output
-        print(equation)
-        print('---------------------------------------------------------')
-        plt.show()
-        plt.savefig('Surface plot-Linear equation.png',transparent=True)
-
-    def plot_surface3D(self):
-        """
-        Function -> plot_surface
-        This function is designed to plot a 3D the surface graph for the first approximation.
-        """
-        # input
-        effects = self.__calculate_effects()
-        avg_y = self.y.mean()
-        coefficients = effects / 2
-
-        # Create grid and compute Z values
-        v1 = np.linspace(-1, 1, 100)
-        v2 = np.linspace(-1, 1, 100)
-        v1, v2 = np.meshgrid(v1, v2)
-        R = avg_y + coefficients[0] * v1 + coefficients[1] * v2 + coefficients[2] * v1 * v2
-    
-        # Create the surface plot
-        surface = go.Surface(z=R, x=v1, y=v2, colorscale='Viridis')
-        layout = go.Layout(
-            title='3D Surface Plot of the Linear Equation',
-            scene=dict(
-                xaxis=dict(title='v1'),
-                yaxis=dict(title='v2'),
-                zaxis=dict(title='R')
-            ),
-
-            width=800,  # Adjust width as needed
-            height=600,  # Adjust height as needed
-        )
-
-        # Constructing the equation string
-        equation = "Linear Equation: R = {:.5f} {:+.5f}*v1 {:+.5f}*v2 {:+.5f}*v1*v2".format(avg_y, coefficients[0], coefficients[1], coefficients[2])
-  
-        #output
-        fig = go.Figure(data=[surface], layout=layout)
-        print(equation)
-        print('---------------------------------------------------------')
-        iplot(fig)
-
-class ExpStat:
-    """
-    ExpStat(yr, n, k) - A class for calculating experimental statistics.
-
-    Attributes
-    ----------
-    yr : pd.Series
-        Values of experimental replicates.
-    n : int
-        Number of replicates.
-    k : int
-        Number of variables
-
-    Method
-    ----------
-    results(): print (Experimental Variance, Experimental Error, Effect Error and t-Student)
-    """
-    def __init__(self,yr=None, n=None, k =None):
-        self.yr = yr
-        self.n = n
-        self.k = k
-
-    def __mean_yr__(self):
-        # calculating mean of replicates
-        if self.yr is None:
-            raise ValueError("yr attribute must be specified.")
-        
-        mean_yr = self.yr.mean(axis=1)
-        return mean_yr
-
-    def __var_yr__(self):
-        # calculating variance
-        if self.yr is None:
-            raise ValueError("yr attribute must be specified.")
-        
-        var_yr = self.yr.var(axis=1)
-        return var_yr
-    def __invt__(self):
-        # calculating t-Student
-        numb_row = self.yr.shape[0] #number of rows
-        dof = (numb_row*(self.n-1)) # degree of freedom
-        
-        return t.ppf(1-.05/2,dof)
-
-    # def __calculate_sspe(self):
-    
-    #     mean_yr = np.mean(self.yr)  # Calculate mean of yr
-    #     sspe = np.sum((self.yr - mean_yr)**2)  # Calculate SSPE
-
-    #     return sspe 
-
-    def results(self):
-        exp_var = self.__var_yr__().mean()                       # experimental variance = avarege variance
-        exp_error = exp_var**0.5                                 # experimental error = sqrt(experimental variance)
-        effect_error = ((2*exp_error)/(self.n*2**self.k)**0.5)   # effect error = ((2*exp_error)/(n*2**k)**0.5)
-        t = self.__invt__()                                      # t-Student
-        # sspe = self.__calculate_sspe()                           # square sum of pure error
-
-        display(Markdown(f'**Experimental Variance:** {exp_var}'))
-        display(Markdown(f'**Experimental Error:** {exp_error}'))    
-        display(Markdown(f'**Effect Error:** {effect_error}'))
-        display(Markdown(f'**t-Student:** {t}'))
-        # display(Markdown(f'**SSPE:** {sspe}'))
-      
-
-        
+ 
 class Cp:
     """
-    Class -> Cp(y, k) - Class for calculating value-t and effect_error 
+    Class -> Cp(yc, k) - Class for calculating effect_error, t-Student and sspe 
         
     Atributes
     -----------
-    y: pd.Series - values of center points region
+    yc: pd.Series - values of center points region
     
     k: int -  number of variables 
     
@@ -354,20 +184,20 @@ class Cp:
     df_sspe: return the degrees of freedom
    
     """
-    def __init__(self,y=None , k=None):
-        self.y = y
+    def __init__(self,yc=None , k=None):
+        self.yc = yc
         self.k = k
 
         
     def __array(self): 
-        return self.y.values
+        return self.yc.values
     
     def __error_exp(self):
-        return self.y.std()
+        return self.yc.std()
     
     def __df(self):
         """Calculating value-t of t-Student bimodal distribution"""
-        return self.y.shape[0]-1
+        return self.yc.shape[0]-1
     
     def __check_df(self):
         return 
@@ -387,23 +217,29 @@ class Cp:
         
         """
         if (df_a == None):
-            return t.ppf(1-.05/2,self.__df())
+            invt_value = t.ppf(1-.05/2,self.__df())
+            # display(Markdown(f'**t-Student is equal to** {invt_value}'))
+            return invt_value
         else:
-            return t.ppf(1-.05/2,df_a)
+            invt_value = t.ppf(1-.05/2,df_a)
+            # display(Markdown(f'**t-Student is equal to** {invt_value}'))
+            return invt_value
 
                     
     def __message_error_11(self):
         return print('Erro11: Invalid parameters.')
     
     def __calculate_effect_error(self): 
-        return 2*self.__error_exp()/(self.y.shape[0]*2**self.k)**0.5
+        return 2*self.__error_exp()/(self.yc.shape[0]*2**self.k)**0.5
     
     def effect_error(self):
         """Return effect_error value"""
-        if self.k == None or self.y.all() == None:
+        if self.k == None or self.yc.all() == None:
             return self.__message_error_11()
         else:
-            return self.__calculate_effect_error()
+            effect_error_value = self.__calculate_effect_error()
+            display(Markdown(f'**Effect error is equal to** {effect_error_value}'))
+            return effect_error_value
     
     def __calculate_sspe(self):
      
@@ -411,7 +247,7 @@ class Cp:
     
     def sspe(self):     
         """Return sspe value"""
-        if self.y.all() == None:
+        if self.yc.all() == None:
             return self.__message_error_11()
         else:
             sspe_value = self.__calculate_sspe()
@@ -421,15 +257,17 @@ class Cp:
             
     def  df_sspe(self):
         """Return degree of freedom"""
-        return len(self.y)
+        return len(self.yc)
 
 class RegressionAnalysis:
     """
-        Class -> RegressionAnalysis(X, y, sspe, dof) - Create a regression model and adjust it through Variance Analysis
+        Class -> RegressionAnalysis(X, y, sspe, df) - Create a regression model and adjust it through Variance Analysis
         
         This routine aims to calculate regression models using the following equation:
         
         $inv(X^tX)X^ty$
+
+        CENTRAL POINT HAVE TO BE INCLUDE IN X MATRIX AND y
         
         Attributes
         -------------------
@@ -437,11 +275,11 @@ class RegressionAnalysis:
         
         y: Response that will be modeled (type: pandas.Series)
         
-        sspe (optional): Pure Error Sum of Squares of the values at the Central point (type: float or int)
+        sspe: Pure Error Sum of Squares of the values at the Central point (type: float or int)
         Use doe.Cp(yc).sspe() to calculate
         For more info: help(doe.Cp.sspe)
         
-        dof (optional): Degrees of freedom of the central point (type: int)
+        df: Degrees of freedom of the central point (type: int)
         Use doe.Cp(yc,k).dof_sspe()
         For more info: help(doe.CP.df_sspe)
         
@@ -547,16 +385,16 @@ class RegressionAnalysis:
     
     
     def __calculate_pred_values(self):
-        """Retunr the values of predict by the model"""
+        """Return the values of predict by the model"""
         return np.matmul(self.X,self.calculate_coeffs())
     
  
     def predict(self, value=0):
-        """Retunr the values of predict by the model"""
+        """Return the values of predict by the model"""
         return np.matmul(self.X,self.calculate_coeffs()+value)
     
     def __calculate_residuals(self):
-        """Retunr the residuals values of predict by the model"""
+        """Return the residuals values of predict by the model"""
         return self.__array_y()-self.__calculate_pred_values()
     
     # Sum of Squares - Part 1
@@ -641,13 +479,13 @@ class RegressionAnalysis:
         """ANOVA table structure"""
         return [
         ['\033[1m'+'Parameter','Sum of Squares (SS)','Degrees of Freedom (DoF)','Mean Square (MS)','F1-Test'+'\033[0m'],
-        ['\033[1mRegression:\033[0m','%.0f'%self.__calculate_SSreg(),self.__df_SSreg(),'%.0f'%self.__calculate_MSreg(),'%.1f'%self.__ftest1() ],
-        ['\033[1mResidual:\033[0m', '%.1f'%self.__calculate_SSres().round(2), self.__df_SSres(),'%.2f'%self.__calculate_MSres(),'%.1f'%self.__ftest1()],
-        ['\033[1mTotal:\033[0m', '%.0f'%self.__calculate_SSTot(), self.__df_SSTot(), '%.0f'%self.__calculate_MSTot(), '\033[1mF2-Test\033[0m'],
-        ['\033[1mPure Error:\033[0m','%.2f'%self.SSPE, self.df, '%.2f'%self.__calculate_MSPE(), '%.2f'%self.__ftest2() ],
-        ['\033[1mLack of Fit:\033[0m', '%.2f'%self.__calculate_SSLoF(), self.__df_SSLof(), '%.2f'%self.__calculate_MSLoF(), '\033[1mF Tabulated\033[0m'],
-        ['\033[1mR²:\033[0m', '%.4f'%self.__calculate_R2(), '\033[1mR:\033[0m', '%.4f'%self.__calculate_R(),'F1: %.3f'%self.__ftable1() ],
-        ['\033[1mR² max:\033[0m','%.4f'%self.__calculate_R2_max(), '\033[1mR max:\033[0m', '%.4f'%self.__calculate_R_max(),'F2: %.3f'%self.__ftable2()]
+        ['\033[1mRegression:\033[0m','%.8f'%self.__calculate_SSreg(),self.__df_SSreg(),'%.8f'%self.__calculate_MSreg(),'%.8f'%self.__ftest1() ],
+        ['\033[1mResidual:\033[0m', '%.8f'%self.__calculate_SSres().round(2), self.__df_SSres(),'%.8f'%self.__calculate_MSres(),'%.8f'%self.__ftest1()],
+        ['\033[1mTotal:\033[0m', '%.8f'%self.__calculate_SSTot(), self.__df_SSTot(), '%.8f'%self.__calculate_MSTot(), '\033[1mF2-Test\033[0m'],
+        ['\033[1mPure Error:\033[0m','%.8f'%self.SSPE, self.df, '%.8f'%self.__calculate_MSPE(), '%.8f'%self.__ftest2() ],
+        ['\033[1mLack of Fit:\033[0m', '%.8f'%self.__calculate_SSLoF(), self.__df_SSLof(), '%.8f'%self.__calculate_MSLoF(), '\033[1mF Tabulated\033[0m'],
+        ['\033[1mR²:\033[0m', '%.8f'%self.__calculate_R2(), '\033[1mR:\033[0m', '%.4f'%self.__calculate_R(),'F1: %.8f'%self.__ftable1() ],
+        ['\033[1mR² max:\033[0m','%.8f'%self.__calculate_R2_max(), '\033[1mR max:\033[0m', '%.8f'%self.__calculate_R_max(),'F2: %.8f'%self.__ftable2()]
         ]
         
     def create_table_anova(self,show=False):
@@ -692,29 +530,29 @@ class RegressionAnalysis:
             - Explained Variation 
             - Maximum Explained Variation
         """
-        fig = plt.figure(constrained_layout=True,figsize=(10,10))          
+        fig = plt.figure(constrained_layout=True,figsize=(12,10))  # figsize=(12,10)       
         subfigs = fig.subfigures(2, 2, wspace=0.07, width_ratios=[1.4, 1.])
 
         #Mean of Squares 
         axs0 = subfigs[0,0].subplots(2, 2)
 
         axs0[0,0].bar('MSReg',self.__calculate_MSreg(),color='darkgreen' ,)
-        axs0[0,0].set_title('MQ Regression',fontweight='black')
-        axs0[0,0].text(-.35, 200, '%.1f'%self.__calculate_MSreg(), fontsize=20,color='white')
+        axs0[0,0].set_title('MS Regression',fontweight='black')
+        # axs0[0, 0].text(-0.35, 1e8, '%.1f' % self.__calculate_MSreg(), fontsize=12, color='white')
 
         axs0[0,1].bar('MSRes and t',self.__calculate_MSres(),color='darkorange')
-        axs0[0,1].set_title('MQ Residual',fontweight='black')
-        axs0[0,1].text(-.35,.5, '%.1f  %.3f'%(self.__calculate_MSres(),Cp().invt(self.__df_SSres()-1)), fontsize=20,color='k')
-        #axs0[0,1].text(-.35, 2.07, '%.4f'%Cp().invt(self.__df_SSres()-1), fontsize=20,color='k')
+        axs0[0,1].set_title('MS Residual',fontweight='black')
+        # axs0[0,1].text(-.35,2000, '%.1f  %.3f'%(self.__calculate_MSres(),Cp().invt(self.__df_SSres()-1)), fontsize=12,color='w')
+        # axs0[0,1].text(-.35, 2.07, '%.4f'%Cp().invt(self.__df_SSres()-1), fontsize=12,color='w')
 
         axs0[1,0].bar('MSPE',3, color= 'darkred')
         axs0[1,0].set_title('MS of Pure Error',fontweight='black')
-        axs0[1,0].text(-.35, 1.27,'%.2f'%self.__calculate_MSPE(), fontsize=20,color='w')
+        # axs0[1,0].text(-.35, 1.27,'%.2f'%self.__calculate_MSPE(), fontsize=12,color='w')
 
         axs0[1,1].bar('MSLoF and t',3,color= 'darkviolet')
         axs0[1,1].set_title('MS of Lack of Fit',fontweight='black')
-        axs0[1,1].text(-.35, 1.98, '%.1f'%self.__calculate_MSLoF(), fontsize=20,color='w')
-        axs0[1,1].text(-.35, 1.07, '%.4f'%Cp().invt(self.__df_SSLof()), fontsize=20,color='w')
+        # axs0[1,1].text(-.35, 1.98, '%.1f'%self.__calculate_MSLoF(), fontsize=12,color='w')
+        # axs0[1,1].text(-.35, 1.07, '%.4f'%Cp().invt(self.__df_SSLof()), fontsize=12,color='w')
 
         
         #F2-test
@@ -753,7 +591,6 @@ class RegressionAnalysis:
         axs3[1].set_title('Explained Variation \n Maximum',fontweight='black')
         axs3[1].axhline(1,color='k')
         
-     
         fig.suptitle('ANOVA (Analisys of Variance)', fontsize=18, fontweight='black',y=1.05)
         plt.savefig('ANOVA (Analisys of Variance).png',transparent=True)
 
@@ -765,13 +602,13 @@ class RegressionAnalysis:
 
     
     def  __user_message(self):
-        return input('\n\n'+'\033[1mDoes the model have lack of fit? [Y/N]  \033[0m'+'\n\n')
+        return input('\n\n'+'Does the model have lack of fit? [Y/N]'+'\n\n')
     
     def __check_model(self): #Return boolean variable for define confidence interval through user message
         check_answer = self.__user_message().upper()
         if check_answer == 'Y':
             return True
-        elif check_answer == 'N': # this change will be importan in recalculate_model function for decide confidence interval
+        elif check_answer == 'N': # this change will be important in recalculate_model function for decide confidence interval
             return False
         else:
             print('\033[1mError: only "Y" or "N" responsed will be accepted.')
@@ -872,17 +709,18 @@ class RegressionAnalysis:
         axs2.set_xlabel('Residual')
         
         axs3 =  fig.add_subplot(spec[2, :])
-        
         axs3.errorbar(self.X.columns,self.calculate_coeffs(),self.define_ic_coeffs(True), fmt='^', linewidth=2, capsize=6, color='darkred')
         axs3.axhline(0,color='darkred', linestyle='dashed')
         axs3.set_ylabel('Coefficient Values')
         axs3.set_xlabel('Coefficient')
         axs3.set_title('Regression of Coefficients',fontweight='black')
         axs3.grid()
+        text_to_display = f"Confidence interval: {self.define_ic_coeffs(True)}"
+        axs3.text(0.5, 0.95, text_to_display, transform=axs3.transAxes, ha='center', va='top', fontsize=10, color='black')
         
         fig.suptitle('Regression Model', fontsize=18, fontweight='black',y=0.95)
         plt.savefig('Regression Model.png',transparent=True)
-        
+
         return plt.show()
     
     
@@ -1025,8 +863,9 @@ class RegressionAnalysis:
         
 class Surface: 
     """
-    Class --> Surface (coeffs, realmax1, realmin1, realmax2, realmin2, codmax1, codmin1, codmax2, codmin2 ) to calculating the surface graph and contour chart
-    TThe matrix must contain the following columns:
+    Class --> Surface (coeffs, realmax1, realmin1, realmax2, realmin2, codmax1, codmin1, codmax2, codmin2 ) 
+    Class to calculating the surface graph and contour chart (Box-Behnken Method)
+    The matrix must contain the following columns:
     Column 1 = coefficients in the following sequence: b0, b1, b2, b11, b22, b12
     Column 2 = encoded values for variable 1
     Column 3 = real values for variable 1
@@ -1216,53 +1055,56 @@ class Surface:
         fig.text(0.2, 0.71, r'$R_{max}(%.2f, %.2f) = %.1f\qquad\qquad\qquad  v_1^{max} = %.1f \quad e\quad v_2^{max} = %.1f$' % (self.maxcod[0], self.maxcod[1], self.zmax, self.maxreal[0], self.maxreal[1]),
         fontsize=15, horizontalalignment='left')
 
-        plt.suptitle(r'$f(v) = {} + {}v_1 + {}v_2 + {}v_1^2 + {}v_2^2 + {}v_1v_2$'.format(b0, b1, b2, b11, b22, b12),y=0.77, x=0.45, fontsize=15)
+        plt.suptitle(r'$f(v) = ({}) + ({})v_1 + ({})v_2 + ({})v_1^2 + ({})v_2^2 + ({})v_1v_2$'.format(b0, b1, b2, b11, b22, b12),y=0.77, x=0.45, fontsize=15)
 
         plt.tight_layout(w_pad=5)
         plt.savefig('surface.png', transparent=True) 
         plt.show()
 
-    #def #adicionar a funcionalidade de interagir e rotacionar o gráfico de superfície utilizando o plotly.graph_objs as go
-        # def surface_rotate (self, matrix_X=None, vector_y=None, scatter=False):
-        #     # Assuming self.meshgrid_real() and self.z(meshgrid=True) return necessary data
-        #     V1, V2 = self.meshgrid_real()
-        #     Z = self.z(meshgrid=True)
-        #     b0, b1, b2, b11, b22, b12 = self.coeffs
-    
-        #     # Criar figura de superfície no Plotly
-        #     surface_plot = go.Figure(data=[go.Surface(x=V1, y=V2, z=Z, colorscale='Viridis')])
-    
-        #     # Configurar layout da superfície
-        #     surface_plot.update_layout(
-        #         title='Model Surface',
-        #         scene=dict(
-        #             xaxis_title='Variable 1',
-        #             yaxis_title='Variable 2',
-        #             zaxis_title='Model Predict',
-        #             camera=dict(
-        #                 up=dict(x=0, y=0, z=1),
-        #                 center=dict(x=0, y=0, z=0),
-        #                 eye=dict(x=1.25, y=1.25, z=1.25)
-        #             ),
-        #             aspectratio=dict(x=1, y=1, z=0.7),
-        #             aspectmode='manual'
-        #         )
-        #     )
+    def surface3D_results(self, matrix_X = None, vector_y = None,scatter=False):
+        """Return surface graph and countour chart
+        
+        Parameters
+        ------------
+        
+        X: matrix X with encoded values of coefficient (type: pandas.dataframe)
+        
+        y: vector y with signal values
+        
+        """
+        # Set Plotly to use an external renderer to avoid MathJax conflict
+        # pio.renderers.default = 'browser'
+        
+        # Generate the meshgrid and surface values
+        V1, V2= self.meshgrid_real()
+        Z = self.z(meshgrid=True)
+        b0, b1, b2, b11, b22, b12 = self.coeffs
 
-        #     # Adicionar gráfico de dispersão se scatter=True
-        #     if scatter:
-        #         # Adicionar um gráfico de dispersão 3D
-        #         scatter_data = go.Scatter3d(
-        #             x=matrix_X.iloc[:, 0],
-        #             y=matrix_X.iloc[:, 1],
-        #             z=vector_y,
-        #             mode='markers',
-        #             marker=dict(size=5, color='red')
-        #         )
-        #         surface_plot.add_trace(scatter_data)
-            
-        #     # Mostrar o gráfico de superfície
-        #     surface_plot.show()
+        surface = go.Surface(x=V1, y=V2, z=Z, colorscale='Viridis') # Add 3D surface plot
+        layout = go.Layout(
+            # title = '',
+            scene = dict(
+                xaxis = dict(title='V1'),
+                yaxis = dict(title='V2'),
+                zaxis = dict(title='R')
+            ),
+            width=1000,
+            height=600,
+        )
+
+        
+        # Constructing the equation string
+        # equation = "R = {} {}*v1 {}v2 {}v1^2 {}v_2^2 {}v_1v_2".format(b0, b1, b2, b11, b22, b12)
+
+        
+        # Show or save the plot
+        fig = go.Figure(data=[surface], layout=layout) # Create the Plotly figure
+        display(Math(f'f(v) ={b0} + ({b1})v_1 + ({b2})v_2 + ({b11})v_1^2 + ({b22})v_2^2 + ({b12})v_1v_2'))
+        
+        # display(Markdown(f'**SSPE is equal to** {sspe_value}'))
+        # print('---------------------------------------------------------')
+        iplot(fig)
+        # fig.show()
         
 
     def solver_diff(self, k=2, printf=False):
